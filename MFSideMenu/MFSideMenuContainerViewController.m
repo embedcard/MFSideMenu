@@ -8,6 +8,7 @@
 
 #import "MFSideMenuContainerViewController.h"
 #import <QuartzCore/QuartzCore.h>
+#import "CardDetailsViewController.h"
 
 NSString * const MFSideMenuStateNotificationEvent = @"MFSideMenuStateNotificationEvent";
 
@@ -124,6 +125,10 @@ typedef enum {
     [self addGestureRecognizers];
 }
 
+- (BOOL)shouldAutomaticallyForwardRotationMethods {
+	return NO;
+}
+
 
 #pragma mark -
 #pragma mark - UIViewController Rotation
@@ -133,11 +138,59 @@ typedef enum {
     return YES;
 }
 
--(void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
+- (NSUInteger)supportedInterfaceOrientations {
+	if (self.centerViewController) {
+		if ([self.centerViewController isKindOfClass:[UINavigationController class]]) {
+			[((UINavigationController *)self.centerViewController).topViewController supportedInterfaceOrientations];
+		}
+		
+		return [self.centerViewController supportedInterfaceOrientations];
+	}
+	
+	return UIInterfaceOrientationMaskAll;
+}
+
+- (BOOL)shouldAutorotate {
+	if (self.centerViewController) {
+		if ([self.centerViewController isKindOfClass:[UINavigationController class]]) {
+			return [((UINavigationController *)self.centerViewController).topViewController shouldAutorotate];
+		}
+		
+		return [self.centerViewController shouldAutorotate];
+	}
+	
+	return YES;
+}
+
+- (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
     [super willAnimateRotationToInterfaceOrientation:toInterfaceOrientation duration:duration];
     
     [self.centerViewController view].layer.shadowPath = nil;
     [self.centerViewController view].layer.shouldRasterize = YES;
+	
+	if ([self.leftMenuViewController isKindOfClass:[UINavigationController class]]) {
+		[((UINavigationController *)self.leftMenuViewController).topViewController willAnimateRotationToInterfaceOrientation:toInterfaceOrientation duration:duration];
+	}
+	
+	if ([self.centerViewController isKindOfClass:[UINavigationController class]]) {
+		if ([((UINavigationController *)self.centerViewController).topViewController isMemberOfClass:[CardDetailsViewController class]]) {
+			[((UINavigationController *)self.centerViewController).topViewController willAnimateRotationToInterfaceOrientation:toInterfaceOrientation duration:duration];
+		}
+	}
+}
+
+- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
+	[super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
+	
+	if ([self.leftMenuViewController isKindOfClass:[UINavigationController class]]) {
+		[((UINavigationController *)self.leftMenuViewController).topViewController willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
+	}
+	
+	if ([self.centerViewController isKindOfClass:[UINavigationController class]]) {
+		if ([((UINavigationController *)self.centerViewController).topViewController isMemberOfClass:[CardDetailsViewController class]]) {
+			[((UINavigationController *)self.centerViewController).topViewController willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
+		}
+	}
 }
 
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
@@ -145,6 +198,19 @@ typedef enum {
     
     [self drawCenterControllerShadowPath];
     [self.centerViewController view].layer.shouldRasterize = NO;
+	
+	if ([self.leftMenuViewController isKindOfClass:[UINavigationController class]]) {
+		[((UINavigationController *)self.leftMenuViewController).topViewController.navigationController.navigationBar sizeToFit];		// extra call to resize the nav bar
+		[((UINavigationController *)self.leftMenuViewController).topViewController didRotateFromInterfaceOrientation:fromInterfaceOrientation];
+	}
+	
+	if ([self.centerViewController isKindOfClass:[UINavigationController class]]) {
+		[((UINavigationController *)self.centerViewController).topViewController.navigationController.navigationBar sizeToFit];		// extra call to resize the nav bar
+		
+		if ([((UINavigationController *)self.centerViewController).topViewController isMemberOfClass:[CardDetailsViewController class]]) {
+			[((UINavigationController *)self.centerViewController).topViewController didRotateFromInterfaceOrientation:fromInterfaceOrientation];
+		}
+	}
 }
 
 
@@ -169,11 +235,14 @@ typedef enum {
 - (void)setCenterViewController:(UIViewController *)centerViewController {
     [self removeChildViewControllerFromContainer:_centerViewController];
     
+	CGPoint origin = ((UIViewController *)_centerViewController).view.frame.origin;
     _centerViewController = centerViewController;
     if(!_centerViewController) return;
     
     [self addChildViewController:_centerViewController];
     [self.view addSubview:[_centerViewController view]];
+	[((UIViewController *)_centerViewController) view].frame = (CGRect){.origin = origin, .size=centerViewController.view.frame.size};
+	
     [_centerViewController didMoveToParentViewController:self];
 }
 
@@ -734,5 +803,22 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     return MIN(duration, self.menuAnimationMaxDuration);
 }
 
+
+@end
+
+@implementation UIViewController (MFSideMenuAdditions)
+
+@dynamic menuContainerViewController;
+
+- (MFSideMenuContainerViewController *)menuContainerViewController {
+	id containerView = self;
+    while (![containerView isKindOfClass:[MFSideMenuContainerViewController class]] && containerView) {
+        if ([containerView respondsToSelector:@selector(parentViewController)])
+            containerView = [containerView parentViewController];
+        if ([containerView respondsToSelector:@selector(splitViewController)] && !containerView)
+            containerView = [containerView splitViewController];
+    }
+	return containerView;
+}
 
 @end
