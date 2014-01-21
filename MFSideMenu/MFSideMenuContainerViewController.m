@@ -129,6 +129,10 @@ typedef enum {
 	return NO;
 }
 
+- (UIStatusBarStyle)preferredStatusBarStyle {
+	return UIStatusBarStyleLightContent;
+}
+
 
 #pragma mark -
 #pragma mark - UIViewController Rotation
