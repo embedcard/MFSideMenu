@@ -126,7 +126,7 @@ typedef enum {
 }
 
 - (BOOL)shouldAutomaticallyForwardRotationMethods {
-	return NO;
+	return YES;
 }
 
 - (UIStatusBarStyle)preferredStatusBarStyle {
