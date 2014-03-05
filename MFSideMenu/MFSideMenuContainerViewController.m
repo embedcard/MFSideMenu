@@ -569,6 +569,18 @@ typedef enum {
 }
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
+	if (self.menuState != MFSideMenuStateLeftMenuOpen) {
+		if ([gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]]) {
+			UIPanGestureRecognizer *panRecognizer = (UIPanGestureRecognizer *)gestureRecognizer;
+			
+			UIView *view = [self.centerViewController view];
+			CGPoint translatedPoint = [panRecognizer translationInView:view];
+			if (translatedPoint.x < 0) {
+				return NO;
+			}
+		}
+	}
+	
     return YES;
 }
 
