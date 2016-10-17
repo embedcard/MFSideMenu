@@ -142,7 +142,7 @@ typedef enum {
     return YES;
 }
 
-- (NSUInteger)supportedInterfaceOrientations {
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
 	if (self.centerViewController) {
 		if ([self.centerViewController isKindOfClass:[UINavigationController class]]) {
 			[((UINavigationController *)self.centerViewController).topViewController supportedInterfaceOrientations];
